@@ -11,7 +11,7 @@ module MongoFormatter
       @db = @client.db(ENV["TEST_RESULT_DB"] || "meteor")
       @collection = @db.collection("results")
 
-      @result = {:name => device_name, :id => device_id}
+      @result = {:name => device_name, :id => device_id, :date => Time.new}
     end
 
     def after_features(features)
