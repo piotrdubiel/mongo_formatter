@@ -1,4 +1,5 @@
 require "mongo"
+require "uri"
 
 module MongoFormatter
   class Formatter
@@ -6,10 +7,9 @@ module MongoFormatter
 
     def initialize(runtime, path, options)
       @runtime = runtime
+      @uri = URI(path)
 
-      @client = MongoClient.new("localhost", ENV["TEST_MONGO_PORT"])
-      @db = @client.db(ENV["TEST_RESULT_DB"] || "meteor")
-      @collection = @db.collection("results")
+      init_mongo_client
 
       @result = {:name => device_name, :id => device_id, :date => Time.new}
     end
@@ -32,6 +32,23 @@ module MongoFormatter
 
     def device_id
       ENV["ADB_DEVICE_ARG"] || ENV["DEVICE_TARGET"]
+    end
+
+    def init_mongo_client
+      raise "Missing 'mongodb://' scheme in URI: #{@uri}" unless @uri.scheme == 'mongodb'
+      @client = MongoClient.new(@uri.host, @uri.port)
+      @db = @client.db(@uri.path.split('/')[1])
+      @collection = @db.collection("results")
+    rescue Mongo::ConnectionFailure
+      print "No connection found with URI => #{@uri}\n"
+      print "WARNING => No results will be saved to MongoDB\n"
+      @collection = NoClient.new
+    end
+  end
+
+  class NoClient
+    def method_missing(method, *args, &block)
+      p method
     end
   end
 end
